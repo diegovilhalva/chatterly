@@ -1,7 +1,7 @@
 import { sendWelcomeEmail } from "../emails/email.handler.js"
 import { generateToken } from "../lib/utils.js"
 import User from "../models/user.model.js"
-import { signupSchema } from "../validators/auth.validator.js"
+import { loginSchema, signupSchema } from "../validators/auth.validator.js"
 import bcrypt from "bcryptjs"
 import "dotenv/config"
 
@@ -42,7 +42,7 @@ export const signup = async (req, res) => {
             });
 
             try {
-                await sendWelcomeEmail(savedUser.email, savedUser.fullName,process.env.CLIENT_URL);
+                await sendWelcomeEmail(savedUser.email, savedUser.fullName, process.env.CLIENT_URL);
             } catch (error) {
                 console.error("Erro ao enviar o email:", error);
             }
@@ -54,4 +54,47 @@ export const signup = async (req, res) => {
         console.error(error)
         return res.status(500).json({ message: "Erro no servidor." })
     }
+}
+
+
+export const login = async (req, res) => {
+    try {
+
+        const { error, value } = loginSchema.validate(req.body)
+        if (error) {
+            return res.status(400).json({ message: error.details[0].message })
+        }
+
+        const { email, password } = value
+
+
+        const user = await User.findOne({ email })
+        if (!user) {
+            return res.status(400).json({ message: "Credenciais inválidas." })
+        }
+
+        const isPasswordValid = await bcrypt.compare(password, user.password)
+        if (!isPasswordValid) {
+            return res.status(400).json({ message: "Credenciais inválidas." })
+        }
+
+        generateToken(user._id, res)
+
+        res.status(200).json({
+            _id: user._id,
+            fullName: user.fullName,
+            email: user.email,
+            profilePic: user.profilePic,
+        })
+    } catch (error) {
+        console.error(error)
+        res.status(500).json({ message: "Erro no servidor." })
+    }
+}
+
+
+
+export const logout = async (req, res) => {
+    res.cookie("jwt", "", { maxAge: 0 });
+    res.status(200).json({ message: "Logout feito com sucesso!" });
 }
