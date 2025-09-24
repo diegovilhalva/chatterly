@@ -30,3 +30,15 @@ export const signupSchema = Joi.object({
       "any.required": "A senha é obrigatória."
     }),
 })
+
+
+export const loginSchema = Joi.object({
+  email: Joi.string().email().required().messages({
+    "string.email": "Por favor, insira um e-mail válido.",
+    "any.required": "O e-mail é obrigatório."
+  }),
+  password: Joi.string().min(8).required().messages({
+    "string.min": "A senha deve ter no mínimo 8 caracteres.",
+    "any.required": "A senha é obrigatória."
+  }),
+})
