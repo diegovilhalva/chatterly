@@ -1,11 +1,35 @@
 import { create } from "zustand"
-
+import { axiosInstance } from "../lib/axios"
+import { toast } from "sonner"
 
 export const useAuthStore = create((set) => ({
-    authUser: { user: "john", _id: 123, age: 25 },
-    isLoading:false,
-    login:() => {
-        console.log("Login Feito")
+    authUser: null,
+    isCheckingAuth: true,
+    isSigningUp: false,
+    checkAuth: async () => {
+        try {
+            const res = await axiosInstance.get("/auth/check")
+            set({ authUser: res.data })
+
+        } catch (error) {
+            console.log("Erro no ao verificar usuário:", error)
+            set({ authUser: null })
+        } finally {
+            set({ isCheckingAuth: false })
+        }
+    },
+    signup: async (data) => {
+        set({ isSigningUp: true })
+        try {
+            const res = await axiosInstance.post("/auth/sign-up", data)
+            set({ authUser: res.data })
+            toast.success("Conta criado com sucesso!")
+
+        } catch (error) {
+            toast.error(error.response.data.message)
+        } finally {
+            set({ isSigningUp: false })
+        }
     }
 
 }))
