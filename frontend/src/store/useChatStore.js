@@ -40,5 +40,17 @@ export const useChatStore = create((set, get) => ({
         } finally {
             set({ isUsersLoading: false });
         }
+    },
+    getMessagesByUserId: async (userId) => {
+        set({ isMessagesLoading: true })
+        try {
+            const res = await axiosInstance.get(`/message/${userId}`)
+            set({ messges: res.data })
+        } catch (error) {
+            toast(error.response.data.message)
+        } finally {
+            set({ isMessagesLoading: false })
+        }
+
     }
 }))
