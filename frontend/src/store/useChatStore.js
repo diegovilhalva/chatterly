@@ -65,9 +65,9 @@ export const useChatStore = create((set, get) => ({
             text: messageData.text,
             image: messageData.image,
             createdAt: new Date().toISOString(),
-            isOptimistic: true, 
+            isOptimistic: true,
         };
-          set({ messages: [...messages, optimisticMessage] })
+        set({ messages: [...messages, optimisticMessage] })
         try {
             const res = await axiosInstance.post(`/message/send/${selectedUser._id}`, messageData)
             set({ messages: messages.concat(res.data) })
@@ -75,5 +75,30 @@ export const useChatStore = create((set, get) => ({
             set({ messages: messages })
             toast.error(error.response?.data?.message || "Ocorreu um erro")
         }
-    }
+    },
+    subscribeToMessages: async () => {
+        const { selectedUser, isSoundEnabled } = get();
+        if (!selectedUser) return
+
+        const socket = useAuthStore.getState().socket
+
+        socket.on("newMessage", (newMessage) => {
+            const isMessageSentFromSelectedUser = newMessage.senderId === selectedUser._id;
+            if (!isMessageSentFromSelectedUser) return;
+
+            const currentMessages = get().messages;
+            set({ messages: [...currentMessages, newMessage] });
+
+            if (isSoundEnabled) {
+                const notificationSound = new Audio("/sounds/notification.mp3");
+
+                notificationSound.currentTime = 0; // reset to start
+                notificationSound.play().catch((e) => console.log("Audio play failed:", e));
+            }
+        })
+    },
+    unsubscribeFromMessages: () => {
+        const socket = useAuthStore.getState().socket;
+        socket.off("newMessage");
+    },
 }))
