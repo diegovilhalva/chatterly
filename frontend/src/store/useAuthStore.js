@@ -1,18 +1,23 @@
 import { create } from "zustand"
 import { axiosInstance } from "../lib/axios"
 import { toast } from "sonner"
+import { io } from "socket.io-client"
 
-export const useAuthStore = create((set) => ({
+const BASE_URL = import.meta.env.MODE === "development" ? "http://localhost:4000" : "/"
+
+export const useAuthStore = create((set,get) => ({
     authUser: null,
     isCheckingAuth: true,
     isSigningUp: false,
     isLoggingIn: false,
     isUploading: false,
+    socket: null,
+    onlineUsers:[],
     checkAuth: async () => {
         try {
             const res = await axiosInstance.get("/auth/check")
             set({ authUser: res.data })
-
+             get().connectSocket()
         } catch (error) {
             console.log("Erro no ao verificar usuário:", error)
             set({ authUser: null })
@@ -25,8 +30,8 @@ export const useAuthStore = create((set) => ({
         try {
             const res = await axiosInstance.post("/auth/sign-up", data)
             set({ authUser: res.data })
-            toast.success("Conta criado com sucesso!")
-
+            toast.success("Conta criada com sucesso!")
+             get().connectSocket();
         } catch (error) {
             toast.error(error.response.data.message)
         } finally {
@@ -41,6 +46,8 @@ export const useAuthStore = create((set) => ({
 
             toast.success("Login feito com sucesso");
 
+            get().connectSocket()
+
         } catch (error) {
             toast.error(error.response.data.message);
         } finally {
@@ -52,9 +59,9 @@ export const useAuthStore = create((set) => ({
             await axiosInstance.post("/auth/logout");
             set({ authUser: null });
             toast.success("Logout feito com sucesso");
-
+             get().disconnectSocket();
         } catch (error) {
-            toast.error("Error logging out");
+            toast.error("Erro ao fazer logout");
 
         }
     },
@@ -70,5 +77,23 @@ export const useAuthStore = create((set) => ({
         } finally {
             set({ isUploading: false })
         }
+    },
+    connectSocket: () => {
+        const { authUser } = get()
+        if (!authUser || get().socket?.connected) return;
+
+        const socket = io(BASE_URL, {
+            withCredentials: true,
+        })
+
+        socket.connect()
+
+        set({ socket })
+        socket.on("getOnlineUsers", (userIds) => {
+            set({ onlineUsers: userIds });
+        })
+    },
+    disconnectSocket: () => {
+        if (get().socket?.connected) get().socket.disconnect();
     }
 }))

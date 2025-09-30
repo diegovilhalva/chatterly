@@ -6,7 +6,8 @@ import authRoutes from "./routes/auth.route.js"
 import messageRoutes from "./routes/message.route.js"
 import path from "path"
 import { connectDB } from "./lib/db.js"
-const app = express()
+import { app, server } from "./lib/socket.js"
+
 
 const PORT = process.env.PORT || 4000
 
@@ -33,7 +34,7 @@ if (process.env.NODE_ENV === "production") {
 }
 
 
-app.listen(PORT, () => {
+server.listen(PORT, () => {
     console.log(`Servidor rodando na porta: ${PORT}`)
     connectDB()
 })
