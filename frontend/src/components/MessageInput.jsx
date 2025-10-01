@@ -45,7 +45,7 @@ const MessageInput = () => {
         if (fileInputRef.current) fileInputRef.current.value = "";
     }
     return (
-        <div className="p-4 border-t border-slate-700/50">
+        <div className="p-4 border-t border-slate-700/50 ">
             {imagePreview && (
                 <div className="max-w-3xl mx-auto mb-3 flex items-center">
                     <div className="relative">
@@ -65,7 +65,7 @@ const MessageInput = () => {
                 </div>
             )}
 
-            <form onSubmit={handleSendMessage} className="max-w-3xl mx-auto flex space-x-4">
+           <form onSubmit={handleSendMessage} className="flex items-center max-md:space-x-2 space-x-4">
                 <input
                     type="text"
                     value={text}
@@ -73,7 +73,7 @@ const MessageInput = () => {
                         setText(e.target.value);
                         isSoundEnabled && playRandomKeyStrokeSound();
                     }}
-                    className="flex-1 bg-slate-800/50 border border-slate-700/50 rounded-lg py-2 px-4"
+                    className="flex-1 max-sm:w-full bg-slate-800/50 border border-slate-700/50 rounded-lg py-2 px-4"
                     placeholder="Digite sua mensagem"
                 />
 
