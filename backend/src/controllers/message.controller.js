@@ -18,32 +18,57 @@ export const getAllContacts = async (req, res) => {
 
 
 export const getChatPartners = async (req, res) => {
-    try {
-        const loggedInUserId = req.user._id;
+  try {
+    const loggedInUserId = req.user._id;
 
+    // pega todas as mensagens enviadas/recebidas
+    const messages = await Message.find({
+      $or: [{ senderId: loggedInUserId }, { receiverId: loggedInUserId }],
+    }).sort({ createdAt: -1 });
 
-        const messages = await Message.find({
-            $or: [{ senderId: loggedInUserId }, { receiverId: loggedInUserId }],
-        });
+    // extrai os ids únicos dos parceiros de chat
+    const chatPartnerIds = [
+      ...new Set(
+        messages.map((msg) =>
+          msg.senderId.toString() === loggedInUserId.toString()
+            ? msg.receiverId.toString()
+            : msg.senderId.toString()
+        )
+      ),
+    ];
 
-        const chatPartnerIds = [
-            ...new Set(
-                messages.map((msg) =>
-                    msg.senderId.toString() === loggedInUserId.toString()
-                        ? msg.receiverId.toString()
-                        : msg.senderId.toString()
-                )
-            ),
-        ];
+    // busca os usuários correspondentes
+    const chatPartners = await User.find({ _id: { $in: chatPartnerIds } }).select("-password");
 
-        const chatPartners = await User.find({ _id: { $in: chatPartnerIds } }).select("-password");
+    // cria um objeto para achar a última mensagem por usuário
+    const lastMessagesMap = {};
+    for (let msg of messages) {
+      const partnerId =
+        msg.senderId.toString() === loggedInUserId.toString()
+          ? msg.receiverId.toString()
+          : msg.senderId.toString();
 
-        res.status(200).json(chatPartners);
-    } catch (error) {
-        console.error(error)
-        res.status(500).json({ message: "Erro no servidor." })
+      // só salva a primeira encontrada (porque já está ordenado por createdAt desc)
+      if (!lastMessagesMap[partnerId]) {
+        lastMessagesMap[partnerId] = msg;
+      }
     }
-}
+
+    // monta a resposta final
+    const result = chatPartners.map((partner) => ({
+      _id: partner._id,
+      fullName: partner.fullName,
+      profilePic: partner.profilePic,
+      lastMessage: lastMessagesMap[partner._id.toString()] || null,
+    }));
+
+    res.status(200).json(result);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: "Erro no servidor." });
+  }
+};
+
 
 
 export const getMessagesByUserID = async (req, res) => {
