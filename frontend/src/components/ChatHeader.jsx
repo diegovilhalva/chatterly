@@ -4,24 +4,24 @@ import { useEffect } from "react"
 import { useAuthStore } from "../store/useAuthStore"
 
 const ChatHeader = () => {
-    const { selectedUser, setSelectedUser } = useChatStore()
+  const { selectedUser, setSelectedUser } = useChatStore()
 
-    const { onlineUsers } = useAuthStore();
+  const { onlineUsers } = useAuthStore();
   const isOnline = onlineUsers.includes(selectedUser._id);
 
-    useEffect(() => {
-        const handleEscKey = (event) => {
-            if (event.key === "Escape") setSelectedUser(null);
-        };
+  useEffect(() => {
+    const handleEscKey = (event) => {
+      if (event.key === "Escape") setSelectedUser(null);
+    };
 
-        window.addEventListener("keydown", handleEscKey);
+    window.addEventListener("keydown", handleEscKey);
 
-        // cleanup function
-        return () => window.removeEventListener("keydown", handleEscKey);
-    }, [setSelectedUser]);
+    // cleanup function
+    return () => window.removeEventListener("keydown", handleEscKey);
+  }, [setSelectedUser]);
 
-    return (
-        <div
+  return (
+    <div
       className="flex justify-between items-center bg-slate-800/50 border-b
    border-slate-700/50 max-h-[84px] px-6 flex-1"
     >
@@ -34,7 +34,20 @@ const ChatHeader = () => {
 
         <div>
           <h3 className="text-slate-200 font-medium">{selectedUser.fullName}</h3>
-          <p className="text-slate-400 text-sm"> {isOnline ? "Online" : "Offline"}</p>
+         
+          <p className="text-slate-400 text-sm">
+            {isOnline
+              ? "Online"
+              : selectedUser.lastSeen
+                ? `Visto por último em ${new Date(selectedUser.lastSeen).toLocaleString([], {
+                  hour: "2-digit",
+                  minute: "2-digit",
+                  day: "2-digit",
+                  month: "short",
+                })}`
+                : "Offline"}
+          </p>
+
         </div>
       </div>
 
@@ -42,7 +55,7 @@ const ChatHeader = () => {
         <XIcon className="w-5 h-5 text-slate-400 hover:text-slate-200 transition-colors cursor-pointer" />
       </button>
     </div>
-    )
+  )
 }
 
 export default ChatHeader

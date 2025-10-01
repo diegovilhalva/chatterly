@@ -3,6 +3,7 @@ import http from "http"
 import express from "express"
 import "dotenv/config"
 import { socketAuthMiddleware } from "../middleware/socket.middleware.js"
+import User from "../models/user.model.js"
 
 
 const app = express()
@@ -35,8 +36,13 @@ io.on("connection", (socket) => {
     io.emit("getOnlineUsers", Object.keys(userSocketMap))
 
 
-    socket.on("disconnect", () => {
+    socket.on("disconnect", async() => {
         delete userSocketMap[userId]
+          try {
+            await User.findByIdAndUpdate(userId, { lastSeen: new Date() })
+        } catch (err) {
+            console.error("Erro ao atualizar lastSeen:", err)
+        }
         io.emit("getOnlineUsers", Object.keys(userSocketMap));
     })
 })
