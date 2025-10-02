@@ -16,16 +16,25 @@ const ChatContainer = () => {
 
   useEffect(() => {
     getMessagesByUserId(selectedUser._id)
+    
 
     subscribeToMessages()
     return () => unsubscribeFromMessages()
-  }, [selectedUser, getMessagesByUserId,subscribeToMessages,unsubscribeFromMessages])
+  }, [selectedUser, getMessagesByUserId, subscribeToMessages, unsubscribeFromMessages])
 
   useEffect(() => {
     if (messageEndRef.current) {
       messageEndRef.current.scrollIntoView({ behavior: "smooth" });
     }
   }, [messages]);
+
+  useEffect(() => {
+    if (selectedUser) {
+      const socket = useAuthStore.getState().socket;
+      socket.emit("markAsRead", { fromUserId: selectedUser._id });
+    }
+  }, [selectedUser]);
+
 
   return (
     <>

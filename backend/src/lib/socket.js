@@ -4,6 +4,7 @@ import express from "express"
 import "dotenv/config"
 import { socketAuthMiddleware } from "../middleware/socket.middleware.js"
 import User from "../models/user.model.js"
+import Message from "../models/message.model.js"
 
 
 const app = express()
@@ -22,23 +23,39 @@ const io = new Server(server, {
 io.use(socketAuthMiddleware)
 
 export function getReceiverSocketId(userId) {
-  return userSocketMap[userId]
+    return userSocketMap[userId]
 }
 
 const userSocketMap = {}
 
 
 io.on("connection", (socket) => {
-   
+
     const userId = socket.userId
     userSocketMap[userId] = socket.id
 
     io.emit("getOnlineUsers", Object.keys(userSocketMap))
 
+    socket.on("markAsRead", async ({ fromUserId }) => {
+        try {
+            await Message.updateMany(
+                { senderId: fromUserId, receiverId: userId, status: { $ne: "read" } },
+                { $set: { status: "read" } }
+            );
 
-    socket.on("disconnect", async() => {
+            const senderSocketId = getReceiverSocketId(fromUserId);
+            if (senderSocketId) {
+                io.to(senderSocketId).emit("messagesRead", { readerId: userId });
+            }
+             io.to(userSocketMap[userId]).emit("messagesRead", { readerId: userId })
+        } catch (err) {
+            console.error("Erro ao marcar como lida:", err);
+        }
+    })
+
+    socket.on("disconnect", async () => {
         delete userSocketMap[userId]
-          try {
+        try {
             await User.findByIdAndUpdate(userId, { lastSeen: new Date() })
         } catch (err) {
             console.error("Erro ao atualizar lastSeen:", err)

@@ -90,49 +90,53 @@ export const getMessagesByUserID = async (req, res) => {
         res.status(500).json({ message: "Erro no servidor." })
     }
 }
-
 export const sendMessage = async (req, res) => {
-    try {
-        const { text, image } = req.body
-        const { id: receiverId } = req.params
-        const senderId = req.user._id
+  try {
+    const { text, image } = req.body;
+    const { id: receiverId } = req.params;
+    const senderId = req.user._id;
 
-        if (!text && !image) {
-            return res.status(400).json({ message: "Por favor,insira texto uma imagem." });
-        }
-
-        if (senderId.equals(receiverId)) {
-            return res.status(400).json({ message: "Você não pode mandar mensagens para si mesmo" });
-        }
-
-        const receiverExists = await User.exists({ _id: receiverId });
-        if (!receiverExists) {
-            return res.status(404).json({ message: "Usuário não encontrado." });
-        }
-
-
-        let imageUrl;
-        if (image) {
-
-            const uploadResponse = await cloudinary.uploader.upload(image);
-            imageUrl = uploadResponse.secure_url;
-        }
-
-        const newMessage = new Message({
-            senderId,
-            receiverId,
-            text,
-            image: imageUrl,
-        });
-
-        await newMessage.save()
-        const receiverSocketId = getReceiverSocketId(receiverId);
-        if (receiverSocketId) {
-            io.to(receiverSocketId).emit("newMessage", newMessage)
-        }
-        res.status(201).json(newMessage)
-    } catch (error) {
-        console.error(error)
-        res.status(500).json({ message: "Erro no servidor." })
+    if (!text && !image) {
+      return res.status(400).json({ message: "Por favor, insira texto ou uma imagem." });
     }
-}
+
+    if (senderId.equals(receiverId)) {
+      return res.status(400).json({ message: "Você não pode mandar mensagens para si mesmo" });
+    }
+
+    const receiverExists = await User.exists({ _id: receiverId });
+    if (!receiverExists) {
+      return res.status(404).json({ message: "Usuário não encontrado." });
+    }
+
+    let imageUrl;
+    if (image) {
+      const uploadResponse = await cloudinary.uploader.upload(image);
+      imageUrl = uploadResponse.secure_url;
+    }
+
+    let newMessage = new Message({
+      senderId,
+      receiverId,
+      text,
+      image: imageUrl,
+      status: "sent",
+    });
+
+    await newMessage.save();
+
+    const receiverSocketId = getReceiverSocketId(receiverId);
+    if (receiverSocketId) {
+      // entregue com sucesso
+      newMessage.status = "delivered";
+      await newMessage.save();
+
+      io.to(receiverSocketId).emit("newMessage", newMessage);
+    }
+
+    res.status(201).json(newMessage);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: "Erro no servidor." });
+  }
+};
