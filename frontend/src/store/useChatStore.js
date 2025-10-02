@@ -78,27 +78,44 @@ export const useChatStore = create((set, get) => ({
     },
     subscribeToMessages: async () => {
         const { selectedUser, isSoundEnabled } = get();
-        if (!selectedUser) return
+        if (!selectedUser) return;
 
-        const socket = useAuthStore.getState().socket
+        const socket = useAuthStore.getState().socket;
 
+        // receber mensagens novas
         socket.on("newMessage", (newMessage) => {
             const isMessageSentFromSelectedUser = newMessage.senderId === selectedUser._id;
             if (!isMessageSentFromSelectedUser) return;
 
             const currentMessages = get().messages;
-            set({ messages: [...currentMessages, newMessage] });
+            const updatedMessages = [...currentMessages, newMessage];
+            set({ messages: updatedMessages });
+
+           
+            socket.emit("markAsRead", { fromUserId: selectedUser._id });
 
             if (isSoundEnabled) {
                 const notificationSound = new Audio("/sounds/notification.mp3");
-
-                notificationSound.currentTime = 0; // reset to start
+                notificationSound.currentTime = 0;
                 notificationSound.play().catch((e) => console.log("Audio play failed:", e));
             }
-        })
+        });
+
+        
+        socket.on("messagesRead", ({ readerId }) => {
+            const { messages } = get();
+            const updated = messages.map((m) =>
+                m.receiverId === readerId ? { ...m, status: "read" } : m
+            );
+            set({ messages: updated });
+        });
     },
+
+
     unsubscribeFromMessages: () => {
         const socket = useAuthStore.getState().socket;
         socket.off("newMessage");
+        socket.off("messagesRead");
     },
+
 }))
