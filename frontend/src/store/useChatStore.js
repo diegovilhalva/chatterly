@@ -76,6 +76,19 @@ export const useChatStore = create((set, get) => ({
             toast.error(error.response?.data?.message || "Ocorreu um erro")
         }
     },
+    addReactionToMessage: async (messageId, emoji) => {
+        const { selectedUser } = get();
+        const socket = useAuthStore.getState().socket;
+
+        try {
+            await axiosInstance.post(`/message/reaction/${messageId}`, { emoji });
+            // emite via socket para outro usuário
+            socket.emit("reactionAdded", { messageId, emoji, toUserId: selectedUser._id });
+        } catch (err) {
+            toast.error("Erro ao enviar reação");
+        }
+    },
+
     subscribeToMessages: async () => {
         const { selectedUser, isSoundEnabled } = get();
         if (!selectedUser) return;
@@ -91,7 +104,7 @@ export const useChatStore = create((set, get) => ({
             const updatedMessages = [...currentMessages, newMessage];
             set({ messages: updatedMessages });
 
-           
+
             socket.emit("markAsRead", { fromUserId: selectedUser._id });
 
             if (isSoundEnabled) {
@@ -101,7 +114,16 @@ export const useChatStore = create((set, get) => ({
             }
         });
 
-        
+        socket.on("reactionAdded", ({ messageId, reactions }) => {
+            const { messages } = get();
+            const updated = messages.map((m) =>
+                m._id === messageId ? { ...m, reactions } : m
+            );
+            set({ messages: updated });
+        });
+
+
+
         socket.on("messagesRead", ({ readerId }) => {
             const { messages } = get();
             const updated = messages.map((m) =>
@@ -117,5 +139,6 @@ export const useChatStore = create((set, get) => ({
         socket.off("newMessage");
         socket.off("messagesRead");
     },
+
 
 }))

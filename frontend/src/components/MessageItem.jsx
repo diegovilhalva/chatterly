@@ -1,9 +1,26 @@
-import { useEffect, useState } from "react";
-import { Check, CheckCheck } from "lucide-react";
+// MessageItem.jsx
+import { Check, CheckCheck, Smile } from "lucide-react";
+import { useState, useRef, useEffect } from "react";
 import ImageModal from "./ImageModal";
+import EmojiPicker from "./EmojiPicker";
+import { useChatStore } from "../store/useChatStore";
 
 const MessageItem = ({ msg, isOwn }) => {
+  const { addReactionToMessage } = useChatStore();
   const [isModalOpen, setModalOpen] = useState(false);
+  const [showEmojiPicker, setShowEmojiPicker] = useState(false);
+  const pickerRef = useRef(null);
+
+  // Fecha o picker se clicar fora
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (pickerRef.current && !pickerRef.current.contains(e.target)) {
+        setShowEmojiPicker(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
 
   const getStatusIcon = () => {
     switch (msg.status) {
@@ -18,14 +35,10 @@ const MessageItem = ({ msg, isOwn }) => {
     }
   };
 
-  useEffect(() => {
-    if (isModalOpen) {
-      document.body.style.overflow = "hidden";
-    } else {
-      document.body.style.overflow = "";
-    }
-  }, [isModalOpen]);
-
+  const handleAddReaction = (emoji) => {
+    addReactionToMessage(msg._id, emoji);
+    setShowEmojiPicker(false);
+  };
 
   return (
     <>
@@ -43,13 +56,49 @@ const MessageItem = ({ msg, isOwn }) => {
             />
           )}
           {msg.text && <p className="mt-2">{msg.text}</p>}
+
+          {/* horário + status */}
           <p className="text-xs mt-1 opacity-75 flex items-center gap-1">
             {new Date(msg.createdAt).toLocaleTimeString(undefined, {
               hour: "2-digit",
               minute: "2-digit",
             })}
             {isOwn && getStatusIcon()}
+
+            {/* botão sempre disponível */}
+            <button
+              onClick={() => setShowEmojiPicker(!showEmojiPicker)}
+              className="ml-1 text-slate-400 hover:text-cyan-400"
+            >
+              <Smile className="w-4 h-4" />
+            </button>
           </p>
+
+          {/* reações abaixo da mensagem */}
+          {msg.reactions?.length > 0 && (
+            <div className="flex flex-wrap gap-1 mt-2">
+              {Object.entries(
+                msg.reactions.reduce((acc, r) => {
+                  acc[r.emoji] = (acc[r.emoji] || 0) + 1;
+                  return acc;
+                }, {})
+              ).map(([emoji, count]) => (
+                <span
+                  key={emoji}
+                  className="text-sm px-2 py-1 bg-slate-700/50 rounded-full"
+                >
+                  {emoji} {count > 1 && `x${count}`}
+                </span>
+              ))}
+            </div>
+          )}
+
+
+          {showEmojiPicker && (
+            <div ref={pickerRef}>
+              <EmojiPicker onSelect={handleAddReaction} />
+            </div>
+          )}
         </div>
       </div>
 

@@ -140,3 +140,39 @@ export const sendMessage = async (req, res) => {
     res.status(500).json({ message: "Erro no servidor." });
   }
 };
+
+
+export const addReaction = async (req, res) => {
+  try {
+    const { messageId } = req.params;
+    const { emoji } = req.body;
+    const userId = req.user._id;
+
+    const message = await Message.findById(messageId);
+    if (!message) return res.status(404).json({ message: "Mensagem não encontrada" });
+
+    message.reactions = message.reactions || [];
+
+    // remove reação anterior do mesmo usuário
+    message.reactions = message.reactions.filter(r => r.userId.toString() !== userId.toString());
+
+    // adiciona a nova
+    message.reactions.push({ userId, emoji });
+
+    await message.save();
+
+    // emitir a mensagem já com todas as reações atualizadas
+    const payload = { messageId, reactions: message.reactions };
+
+    const receiverSocketId = getReceiverSocketId(message.receiverId.toString());
+    const senderSocketId = getReceiverSocketId(message.senderId.toString());
+
+    if (receiverSocketId) io.to(receiverSocketId).emit("reactionAdded", payload);
+    if (senderSocketId) io.to(senderSocketId).emit("reactionAdded", payload);
+
+    res.status(200).json(payload);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: "Erro ao adicionar reação" });
+  }
+};
