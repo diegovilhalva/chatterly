@@ -1,12 +1,13 @@
 
 const emojis = [
-  "😀","😂","😍","😎","🤔","😢","😡","❤️",
-  "👍","👏","🙏","🔥","🎉","💯","🥳","🤯"
+  "😀", "😂", "😍", "😎", "🤔", "😢", "😡", "❤️",
+  "👍", "👏", "🙏", "🔥", "🎉", "💯", "🥳", "🤯"
 ];
 
 const EmojiPicker = ({ onSelect }) => {
   return (
-    <div className="absolute bottom-full left-0 mb-1 bg-slate-800 border border-slate-700 rounded-lg p-2 grid grid-cols-8 gap-1 shadow-lg z-50">
+    <div className="absolute bottom-full left-0 mb-1 bg-slate-800 border border-slate-700 rounded-lg p-2 
+  grid grid-cols-[repeat(auto-fit,minmax(32px,1fr))] gap-1 shadow-lg z-50 min-w-[200px]">
       {emojis.map((emoji, i) => (
         <button
           key={i}
@@ -17,6 +18,8 @@ const EmojiPicker = ({ onSelect }) => {
         </button>
       ))}
     </div>
+
+
   );
 };
 
