@@ -1,17 +1,19 @@
-// MessageItem.jsx
-import { Check, CheckCheck, Smile } from "lucide-react";
+import { Check, CheckCheck, Smile, Edit, Trash2, CircleXIcon } from "lucide-react";
 import { useState, useRef, useEffect } from "react";
 import ImageModal from "./ImageModal";
 import EmojiPicker from "./EmojiPicker";
 import { useChatStore } from "../store/useChatStore";
+import { useAuthStore } from "../store/useAuthStore";
 
 const MessageItem = ({ msg, isOwn }) => {
-  const { addReactionToMessage } = useChatStore();
+  const { addReactionToMessage,  editMessage, deleteMessage } = useChatStore();
+  const socket = useAuthStore.getState().socket
   const [isModalOpen, setModalOpen] = useState(false);
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
+  const [editText, setEditText] = useState(msg.text || "");
   const pickerRef = useRef(null);
 
-  // Fecha o picker se clicar fora
   useEffect(() => {
     const handleClickOutside = (e) => {
       if (pickerRef.current && !pickerRef.current.contains(e.target)) {
@@ -40,12 +42,24 @@ const MessageItem = ({ msg, isOwn }) => {
     setShowEmojiPicker(false);
   };
 
+  const handleEditMessage = () => {
+    if (editText.trim() === "") return;
+    // Atualiza via socket
+    socket.emit("editMessage", { messageId: msg._id, text: editText });
+    editMessage(msg._id, { text: editText, edited: true });
+    setIsEditing(false);
+  };
+
+  const handleDeleteMessage = () => {
+    socket.emit("deleteMessage", { messageId: msg._id });
+    deleteMessage(msg._id);
+  };
+
   return (
     <>
       <div className={`chat ${isOwn ? "chat-end" : "chat-start"}`}>
         <div
-          className={`chat-bubble relative ${isOwn ? "bg-cyan-600 text-white" : "bg-slate-800 text-slate-200"
-            }`}
+          className={`chat-bubble relative ${isOwn ? "bg-cyan-600 text-white" : "bg-slate-800 text-slate-200"}`}
         >
           {msg.image && (
             <img
@@ -55,26 +69,59 @@ const MessageItem = ({ msg, isOwn }) => {
               onClick={() => setModalOpen(true)}
             />
           )}
-          {msg.text && <p className="mt-2">{msg.text}</p>}
 
-          {/* horário + status */}
+          {isEditing ? (
+            <div className="flex gap-2 items-center">
+              <input
+                className="flex-1 rounded px-2 py-1 text-black"
+                value={editText}
+                onChange={(e) => setEditText(e.target.value)}
+              />
+              <button onClick={handleEditMessage}>
+                <Check className="w-5 h-5 text-green-500" />
+              </button>
+              <button onClick={() => setIsEditing(false)} className="text-red-500">
+                <CircleXIcon />
+              </button>
+            </div>
+          ) : (
+            <p className="mt-2">
+              {msg.deleted ? "Mensagem deletada": msg.text} {msg.edited && <span className="text-xs opacity-50">(editado)</span>} 
+  
+            </p>
+          )}
+          
+
+          {/* horário + status + emojis */}
           <p className="text-xs mt-1 opacity-75 flex items-center gap-1">
             {new Date(msg.createdAt).toLocaleTimeString(undefined, {
               hour: "2-digit",
               minute: "2-digit",
             })}
-            {isOwn && getStatusIcon()}
+            {isOwn && !msg.deleted && getStatusIcon()}
 
-            {/* botão sempre disponível */}
-            <button
+            {/* emoji picker */}
+            {!msg.deleted && ( <button
               onClick={() => setShowEmojiPicker(!showEmojiPicker)}
               className="ml-1 text-slate-400 hover:text-cyan-400"
             >
               <Smile className="w-4 h-4" />
-            </button>
+            </button>)}
+
+            {/* editar/deletar */}
+            {isOwn && !isEditing   && !msg.deleted && (
+              <>
+                <button onClick={() => setIsEditing(true)} className="ml-1 text-slate-400 hover:text-yellow-400">
+                  <Edit className="w-4 h-4" />
+                </button>
+                <button onClick={handleDeleteMessage} className="ml-1 text-slate-400 hover:text-red-500">
+                  <Trash2 className="w-4 h-4" />
+                </button>
+              </>
+            )}
           </p>
 
-          {/* reações abaixo da mensagem */}
+          {/* reações */}
           {msg.reactions?.length > 0 && (
             <div className="flex flex-wrap gap-1 mt-2">
               {Object.entries(
@@ -83,16 +130,12 @@ const MessageItem = ({ msg, isOwn }) => {
                   return acc;
                 }, {})
               ).map(([emoji, count]) => (
-                <span
-                  key={emoji}
-                  className="text-sm px-2 py-1 bg-slate-700/50 rounded-full"
-                >
+                <span key={emoji} className="text-sm px-2 py-1 bg-slate-700/50 rounded-full">
                   {emoji} {count > 1 && `x${count}`}
                 </span>
               ))}
             </div>
           )}
-
 
           {showEmojiPicker && (
             <div ref={pickerRef}>
@@ -102,13 +145,7 @@ const MessageItem = ({ msg, isOwn }) => {
         </div>
       </div>
 
-      {isModalOpen && (
-        <ImageModal
-          src={msg.image}
-          alt="Shared"
-          onClose={() => setModalOpen(false)}
-        />
-      )}
+      {isModalOpen && <ImageModal src={msg.image} alt="Shared" onClose={() => setModalOpen(false)} />}
     </>
   );
 };

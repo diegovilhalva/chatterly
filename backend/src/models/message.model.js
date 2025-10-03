@@ -28,6 +28,10 @@ const messageSchema = new mongoose.Schema({
     userId: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
     emoji: String,
   }],
+  deleted: {
+    type: Boolean,
+    default: false,
+  },
 }, { timestamps: true })
 
 const Message = mongoose.model("Message", messageSchema)

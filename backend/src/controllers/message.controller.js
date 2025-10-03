@@ -176,3 +176,72 @@ export const addReaction = async (req, res) => {
     res.status(500).json({ message: "Erro ao adicionar reação" });
   }
 };
+
+// controllers/message.controller.js
+export const editMessage = async (req, res) => {
+  try {
+    const { messageId } = req.params;
+    const { text, image } = req.body;
+    const userId = req.user._id;
+
+    let message = await Message.findById(messageId);
+    if (!message) return res.status(404).json({ message: "Mensagem não encontrada" });
+
+    if (message.senderId.toString() !== userId.toString()) {
+      return res.status(403).json({ message: "Você não pode editar esta mensagem" });
+    }
+
+    if (text) message.text = text;
+    if (image) message.image = image;
+
+    await message.save();
+
+    const payload = { messageId, text: message.text, image: message.image };
+
+    const receiverSocketId = getReceiverSocketId(message.receiverId.toString());
+    const senderSocketId = getReceiverSocketId(message.senderId.toString());
+
+    if (receiverSocketId) io.to(receiverSocketId).emit("messageEdited", payload);
+    if (senderSocketId) io.to(senderSocketId).emit("messageEdited", payload);
+
+    res.status(200).json(payload);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: "Erro ao editar mensagem" });
+  }
+};
+
+
+// controllers/message.controller.js
+export const deleteMessage = async (req, res) => {
+  try {
+    const { messageId } = req.params;
+    const userId = req.user._id;
+
+    let message = await Message.findById(messageId);
+    if (!message) return res.status(404).json({ message: "Mensagem não encontrada" });
+
+    if (message.senderId.toString() !== userId.toString()) {
+      return res.status(403).json({ message: "Você não pode deletar esta mensagem" });
+    }
+
+    message.deleted = true;
+    message.text = null;
+    message.image = null;
+    await message.save();
+
+    const payload = { messageId };
+
+    const receiverSocketId = getReceiverSocketId(message.receiverId.toString());
+    const senderSocketId = getReceiverSocketId(message.senderId.toString());
+
+    if (receiverSocketId) io.to(receiverSocketId).emit("messageDeleted", payload);
+    if (senderSocketId) io.to(senderSocketId).emit("messageDeleted", payload);
+
+    res.status(200).json(payload);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: "Erro ao deletar mensagem" });
+  }
+};
+
