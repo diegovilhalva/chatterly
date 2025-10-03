@@ -131,6 +131,22 @@ export const useChatStore = create((set, get) => ({
             );
             set({ messages: updated });
         });
+        socket.on("messageEdited", ({ messageId, text, image }) => {
+            const { messages } = get();
+            const updated = messages.map(m =>
+                m._id === messageId ? { ...m, text, image, edited: true } : m
+            );
+            set({ messages: updated });
+        });
+
+        socket.on("messageDeleted", ({ messageId }) => {
+            const { messages } = get();
+            const updated = messages.map(m =>
+                m._id === messageId ? { ...m, deleted: true } : m
+            );
+            set({ messages: updated });
+        });
+
     },
 
 
@@ -139,6 +155,22 @@ export const useChatStore = create((set, get) => ({
         socket.off("newMessage");
         socket.off("messagesRead");
     },
+    editMessage: async (messageId, newContent) => {
+        try {
+            await axiosInstance.put(`/message/edit/${messageId}`, newContent);
+        } catch (err) {
+            toast.error("Erro ao editar mensagem");
+        }
+    },
+
+    deleteMessage: async (messageId) => {
+        try {
+            await axiosInstance.delete(`/message/${messageId}`);
+        } catch (err) {
+            toast.error("Erro ao deletar mensagem");
+        }
+    },
+
 
 
 }))

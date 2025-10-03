@@ -47,11 +47,56 @@ io.on("connection", (socket) => {
             if (senderSocketId) {
                 io.to(senderSocketId).emit("messagesRead", { readerId: userId });
             }
-             io.to(userSocketMap[userId]).emit("messagesRead", { readerId: userId })
+            io.to(userSocketMap[userId]).emit("messagesRead", { readerId: userId })
         } catch (err) {
             console.error("Erro ao marcar como lida:", err);
         }
     })
+    socket.on("editMessage", async ({ messageId, text, image }) => {
+        try {
+            let message = await Message.findById(messageId);
+            if (!message) return;
+
+            // só o remetente pode editar
+            if (message.senderId.toString() !== userId.toString()) return;
+
+            if (text !== undefined) message.text = text;
+            if (image !== undefined) message.image = image;
+            message.edited = true;
+            await message.save();
+
+            const payload = { messageId, text: message.text, image: message.image, edited: true };
+
+            // enviar atualização para remetente e destinatário
+            const receiverSocketId = getReceiverSocketId(message.receiverId.toString());
+            if (receiverSocketId) io.to(receiverSocketId).emit("messageEdited", payload);
+            io.to(socket.id).emit("messageEdited", payload);
+        } catch (err) {
+            console.error("Erro ao editar mensagem:", err);
+        }
+    });
+
+    socket.on("deleteMessage", async ({ messageId }) => {
+        try {
+            let message = await Message.findById(messageId);
+            if (!message) return;
+
+            if (message.senderId.toString() !== userId.toString()) return;
+
+            message.deleted = true;
+            message.text = null;
+            message.image = null;
+            await message.save();
+
+            const payload = { messageId, deleted: true };
+
+            const receiverSocketId = getReceiverSocketId(message.receiverId.toString());
+            if (receiverSocketId) io.to(receiverSocketId).emit("messageDeleted", payload);
+            io.to(socket.id).emit("messageDeleted", payload);
+        } catch (err) {
+            console.error("Erro ao deletar mensagem:", err);
+        }
+    });
 
     socket.on("disconnect", async () => {
         delete userSocketMap[userId]
