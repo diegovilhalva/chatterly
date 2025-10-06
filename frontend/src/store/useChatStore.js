@@ -11,6 +11,7 @@ export const useChatStore = create((set, get) => ({
     selectedUser: null,
     isUsersLoading: false,
     isMessagesLoading: false,
+    isTyping: false,
     isSoundEnabled: localStorage.getItem("isSoundEnabled") === true,
 
     toggleSound: () => {
@@ -138,6 +139,19 @@ export const useChatStore = create((set, get) => ({
             );
             set({ messages: updated });
         });
+
+        socket.on("userTyping", ({ fromUserId }) => {
+            if (selectedUser && fromUserId === selectedUser._id) {
+                set({ isTyping: true });
+            }
+        });
+
+        socket.on("userStoppedTyping", ({ fromUserId }) => {
+            if (selectedUser && fromUserId === selectedUser._id) {
+                set({ isTyping: false });
+            }
+        });
+
 
         socket.on("messageDeleted", ({ messageId }) => {
             const { messages } = get();

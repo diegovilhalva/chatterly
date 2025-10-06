@@ -98,6 +98,23 @@ io.on("connection", (socket) => {
         }
     });
 
+    
+    socket.on("typing", ({ toUserId }) => {
+        const receiverSocketId = getReceiverSocketId(toUserId);
+        if (receiverSocketId) {
+            io.to(receiverSocketId).emit("userTyping", { fromUserId: userId });
+        }
+    });
+
+    
+    socket.on("stopTyping", ({ toUserId }) => {
+        const receiverSocketId = getReceiverSocketId(toUserId);
+        if (receiverSocketId) {
+            io.to(receiverSocketId).emit("userStoppedTyping", { fromUserId: userId });
+        }
+    });
+
+
     socket.on("disconnect", async () => {
         delete userSocketMap[userId]
         try {
