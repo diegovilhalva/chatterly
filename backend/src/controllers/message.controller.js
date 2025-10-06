@@ -92,12 +92,12 @@ export const getMessagesByUserID = async (req, res) => {
 }
 export const sendMessage = async (req, res) => {
   try {
-    const { text, image } = req.body;
+    const { text, image, audio } = req.body;
     const { id: receiverId } = req.params;
     const senderId = req.user._id;
 
-    if (!text && !image) {
-      return res.status(400).json({ message: "Por favor, insira texto ou uma imagem." });
+    if (!text && !image && !audio) {
+      return res.status(400).json({ message: "Por favor, envie texto, imagem ou áudio." });
     }
 
     if (senderId.equals(receiverId)) {
@@ -109,17 +109,26 @@ export const sendMessage = async (req, res) => {
       return res.status(404).json({ message: "Usuário não encontrado." });
     }
 
-    let imageUrl;
+    let imageUrl, audioUrl;
+
     if (image) {
       const uploadResponse = await cloudinary.uploader.upload(image);
       imageUrl = uploadResponse.secure_url;
     }
 
-    let newMessage = new Message({
+    if (audio) {
+      const uploadResponse = await cloudinary.uploader.upload(audio, {
+        resource_type: "video", // necessário para suportar arquivos de áudio
+      });
+      audioUrl = uploadResponse.secure_url;
+    }
+
+    const newMessage = new Message({
       senderId,
       receiverId,
       text,
       image: imageUrl,
+      audio: audioUrl,
       status: "sent",
     });
 
@@ -127,10 +136,8 @@ export const sendMessage = async (req, res) => {
 
     const receiverSocketId = getReceiverSocketId(receiverId);
     if (receiverSocketId) {
-      // entregue com sucesso
       newMessage.status = "delivered";
       await newMessage.save();
-
       io.to(receiverSocketId).emit("newMessage", newMessage);
     }
 
@@ -140,6 +147,7 @@ export const sendMessage = async (req, res) => {
     res.status(500).json({ message: "Erro no servidor." });
   }
 };
+
 
 
 export const addReaction = async (req, res) => {
