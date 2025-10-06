@@ -4,9 +4,10 @@ import ImageModal from "./ImageModal";
 import EmojiPicker from "./EmojiPicker";
 import { useChatStore } from "../store/useChatStore";
 import { useAuthStore } from "../store/useAuthStore";
+import AudioPlayer from "./AudioPlayer";
 
 const MessageItem = ({ msg, isOwn }) => {
-  const { addReactionToMessage,  editMessage, deleteMessage } = useChatStore();
+  const { addReactionToMessage, editMessage, deleteMessage } = useChatStore();
   const socket = useAuthStore.getState().socket
   const [isModalOpen, setModalOpen] = useState(false);
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
@@ -86,11 +87,16 @@ const MessageItem = ({ msg, isOwn }) => {
             </div>
           ) : (
             <p className="mt-2">
-              {msg.deleted ? "Mensagem deletada": msg.text} {msg.edited && <span className="text-xs opacity-50">(editado)</span>} 
-  
+              {msg.deleted ? "Mensagem deletada" : msg.text} {msg.edited && <span className="text-xs opacity-50">(editado)</span>}
+
             </p>
           )}
-          
+          {msg.audio && !msg.deleted && (
+            <AudioPlayer src={msg.audio} />
+          )}
+
+
+
 
           {/* horário + status + emojis */}
           <p className="text-xs mt-1 opacity-75 flex items-center gap-1">
@@ -101,7 +107,7 @@ const MessageItem = ({ msg, isOwn }) => {
             {isOwn && !msg.deleted && getStatusIcon()}
 
             {/* emoji picker */}
-            {!msg.deleted && ( <button
+            {!msg.deleted && (<button
               onClick={() => setShowEmojiPicker(!showEmojiPicker)}
               className="ml-1 text-slate-400 hover:text-cyan-400"
             >
@@ -109,7 +115,7 @@ const MessageItem = ({ msg, isOwn }) => {
             </button>)}
 
             {/* editar/deletar */}
-            {isOwn && !isEditing   && !msg.deleted && (
+            {isOwn && !isEditing && !msg.deleted && (
               <>
                 <button onClick={() => setIsEditing(true)} className="ml-1 text-slate-400 hover:text-yellow-400">
                   <Edit className="w-4 h-4" />

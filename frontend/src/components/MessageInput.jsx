@@ -2,7 +2,7 @@ import { useRef, useState, useEffect } from "react";
 import useKeyboardSound from "../hooks/useKeyboardSound";
 import { useChatStore } from "../store/useChatStore";
 import { toast } from "sonner";
-import { ImageIcon, SendIcon, XIcon, Smile } from "lucide-react";
+import { ImageIcon, SendIcon, XIcon, Smile, Mic, Square } from "lucide-react";
 import EmojiPicker from "./EmojiPicker";
 import { useAuthStore } from "../store/useAuthStore";
 
@@ -12,6 +12,9 @@ const MessageInput = () => {
   const [imagePreview, setImagePreview] = useState(null);
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const { selectedUser } = useChatStore()
+  const [isRecording, setIsRecording] = useState(false);
+  const mediaRecorderRef = useRef(null);
+  const chunksRef = useRef([]);
   const fileInputRef = useRef(null);
   const inputRef = useRef(null);
   const pickerRef = useRef(null);
@@ -76,14 +79,43 @@ const MessageInput = () => {
   };
 
   const handleTyping = () => {
-    
-     socket.emit("typing", { toUserId: selectedUser._id });
+
+    socket.emit("typing", { toUserId: selectedUser._id });
 
     clearTimeout(typingTimeout);
     typingTimeout = setTimeout(() => {
-        socket.emit("stopTyping", { toUserId: selectedUser._id });
+      socket.emit("stopTyping", { toUserId: selectedUser._id });
     }, 2000);
   }
+
+
+
+  const startRecording = async () => {
+    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    const mimeType = MediaRecorder.isTypeSupported("audio/webm")
+  ? "audio/webm"
+  : "audio/ogg";
+    mediaRecorderRef.current = new MediaRecorder(stream,{mimeType});
+    chunksRef.current = [];
+    mediaRecorderRef.current.ondataavailable = (e) => chunksRef.current.push(e.data);
+    mediaRecorderRef.current.onstop = async () => {
+      const blob = new Blob(chunksRef.current, { type: mimeType });
+      const reader = new FileReader();
+      reader.readAsDataURL(blob);
+      reader.onloadend = async () => {
+        const base64Audio = reader.result;
+        await sendMessage({ audio: base64Audio });
+      };
+    };
+    mediaRecorderRef.current.start();
+    setIsRecording(true);
+  };
+
+  const stopRecording = () => {
+    mediaRecorderRef.current.stop();
+    setIsRecording(false);
+  };
+
 
   return (
     <div className="p-4 border-t border-slate-700/50 relative">
@@ -147,6 +179,9 @@ const MessageInput = () => {
             }`}
         >
           <ImageIcon className="w-5 h-5" />
+        </button>
+        <button onClick={isRecording ? stopRecording : startRecording}  className="text-slate-400 hover:text-cyan-400">
+          {isRecording ? <Square className="text-red-500"/> : <Mic  />}
         </button>
 
         <button
