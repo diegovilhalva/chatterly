@@ -4,17 +4,19 @@ import { useChatStore } from "../store/useChatStore";
 import { toast } from "sonner";
 import { ImageIcon, SendIcon, XIcon, Smile } from "lucide-react";
 import EmojiPicker from "./EmojiPicker";
+import { useAuthStore } from "../store/useAuthStore";
 
 const MessageInput = () => {
   const { playRandomKeyStrokeSound } = useKeyboardSound();
   const [text, setText] = useState("");
   const [imagePreview, setImagePreview] = useState(null);
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
-
+  const { selectedUser } = useChatStore()
   const fileInputRef = useRef(null);
   const inputRef = useRef(null);
   const pickerRef = useRef(null);
-
+  const socket = useAuthStore.getState().socket
+  let typingTimeout;
   const { sendMessage, isSoundEnabled } = useChatStore();
 
   useEffect(() => {
@@ -73,6 +75,16 @@ const MessageInput = () => {
     }, 0);
   };
 
+  const handleTyping = () => {
+    
+     socket.emit("typing", { toUserId: selectedUser._id });
+
+    clearTimeout(typingTimeout);
+    typingTimeout = setTimeout(() => {
+        socket.emit("stopTyping", { toUserId: selectedUser._id });
+    }, 2000);
+  }
+
   return (
     <div className="p-4 border-t border-slate-700/50 relative">
       {imagePreview && (
@@ -105,6 +117,7 @@ const MessageInput = () => {
           onChange={(e) => {
             setText(e.target.value);
             isSoundEnabled && playRandomKeyStrokeSound();
+            handleTyping()
           }}
           className="flex-1 max-sm:w-full bg-slate-800/50 border border-slate-700/50 rounded-lg py-2 px-4"
           placeholder="Digite sua mensagem"
@@ -130,9 +143,8 @@ const MessageInput = () => {
         <button
           type="button"
           onClick={() => fileInputRef.current?.click()}
-          className={`bg-slate-800/50 text-slate-400 hover:text-slate-200 rounded-lg px-4 transition-colors ${
-            imagePreview ? "text-cyan-500" : ""
-          }`}
+          className={`bg-slate-800/50 text-slate-400 hover:text-slate-200 rounded-lg px-4 transition-colors ${imagePreview ? "text-cyan-500" : ""
+            }`}
         >
           <ImageIcon className="w-5 h-5" />
         </button>
