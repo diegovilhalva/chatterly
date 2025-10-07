@@ -6,12 +6,14 @@ const AudioPlayer = ({ src, isOwn }) => {
   const [isPlaying, setIsPlaying] = useState(false);
   const [progress, setProgress] = useState(0);
   const [duration, setDuration] = useState(0);
+  const [isLiveStream, setIsLiveStream] = useState(false); // Novo estado para identificar streams
 
   // Resetar estados quando src mudar
   useEffect(() => {
     setIsPlaying(false);
     setProgress(0);
     setDuration(0);
+    setIsLiveStream(false); // Resetar também o flag de stream
   }, [src]);
 
   useEffect(() => {
@@ -19,23 +21,29 @@ const AudioPlayer = ({ src, isOwn }) => {
     if (!audio) return;
 
     const updateProgress = () => {
-      if (isFinite(audio.currentTime)) {
-        setProgress(audio.currentTime);
-      }
+      // Para streams, progresso é baseado apenas no currentTime
+      setProgress(audio.currentTime);
     };
 
     const setAudioData = () => {
-      // Seta a duration apenas se for um número finito e válido
-      if (audio.duration && isFinite(audio.duration)) {
-        setDuration(audio.duration);
+      const audioDuration = audio.duration;
+      
+      // Verifica explicitamente se a duração é infinita
+      if (!isFinite(audioDuration)) {
+        setIsLiveStream(true);
+        setDuration(0); // Duração não é usada para streams
+      } else if (audioDuration && isFinite(audioDuration)) {
+        setIsLiveStream(false);
+        setDuration(audioDuration);
       }
       setProgress(audio.currentTime || 0);
     };
 
     const handleEnded = () => {
+      // Streams infinitas não disparam 'ended'
       setIsPlaying(false);
-      if (audio.duration && isFinite(audio.duration)) {
-        setProgress(audio.duration);
+      if (!isLiveStream && duration && isFinite(duration)) {
+        setProgress(duration);
       }
     };
 
@@ -57,7 +65,7 @@ const AudioPlayer = ({ src, isOwn }) => {
       audio.removeEventListener("play", handlePlay);
       audio.removeEventListener("pause", handlePause);
     };
-  }, [src]);
+  }, [src, isLiveStream, duration]); // Adicione isLiveStream e duration como dependências
 
   const togglePlay = () => {
     const audio = audioRef.current;
@@ -75,8 +83,10 @@ const AudioPlayer = ({ src, isOwn }) => {
 
   const handleProgressClick = (e) => {
     const audio = audioRef.current;
-    // Só permite click se duration for um número finito e maior que 0
-    if (!audio || !duration || !isFinite(duration)) return;
+    // Para streams, não permitir seek
+    if (!audio || isLiveStream) return;
+    
+    if (!duration || !isFinite(duration)) return;
 
     const rect = e.currentTarget.getBoundingClientRect();
     const clickX = e.clientX - rect.left;
@@ -87,7 +97,6 @@ const AudioPlayer = ({ src, isOwn }) => {
   };
 
   const formatTime = (time) => {
-    // Verifica se time não é um número finito e válido
     if (!time || !isFinite(time) || isNaN(time)) return "0:00";
     const minutes = Math.floor(time / 60);
     const seconds = Math.floor(time % 60).toString().padStart(2, "0");
@@ -130,13 +139,17 @@ const AudioPlayer = ({ src, isOwn }) => {
               isOwn ? "bg-white" : "bg-cyan-400"
             }`}
             style={{ 
-             
-              width: duration && isFinite(duration) ? `${(progress / duration) * 100}%` : '0%' 
+              // Para streams, a barra avança continuamente sem relação com "duration"
+              width: isLiveStream 
+                ? '50%' // Para streaming, você pode usar uma barra de progresso indeterminada ou baseada em outro critério
+                : (duration && isFinite(duration) ? `${(progress / duration) * 100}%` : '0%')
             }}
           />
         </div>
         <span className="text-xs mt-1">
-          {formatTime(progress)} / {formatTime(duration)}
+          {formatTime(progress)}
+          {/* Mostra "Ao Vivo" para streams em vez da duração total */}
+          {isLiveStream ? " / Ao Vivo" : ` / ${formatTime(duration)}`}
         </span>
       </div>
     </div>
