@@ -7,79 +7,88 @@ const AudioPlayer = ({ src, isOwn }) => {
   const [progress, setProgress] = useState(0);
   const [duration, setDuration] = useState(0);
 
+  // Resetar estados quando src mudar
+  useEffect(() => {
+    setIsPlaying(false);
+    setProgress(0);
+    setDuration(0);
+  }, [src]);
+
   useEffect(() => {
     const audio = audioRef.current;
     if (!audio) return;
 
-    const updateProgress = () => setProgress(audio.currentTime);
+    const updateProgress = () => {
+      if (isFinite(audio.currentTime)) {
+        setProgress(audio.currentTime);
+      }
+    };
 
     const setAudioData = () => {
-      const d = audio.duration;
-      if (!isFinite(d) || isNaN(d) || d === 0) return; 
-      setDuration(d);
+      // Seta a duration apenas se for um número finito e válido
+      if (audio.duration && isFinite(audio.duration)) {
+        setDuration(audio.duration);
+      }
       setProgress(audio.currentTime || 0);
     };
 
     const handleEnded = () => {
       setIsPlaying(false);
-      setProgress(audio.duration || 0);
+      if (audio.duration && isFinite(audio.duration)) {
+        setProgress(audio.duration);
+      }
     };
 
     const handlePlay = () => setIsPlaying(true);
     const handlePause = () => setIsPlaying(false);
 
-    const fixDuration = () => {
-      if (!isFinite(audio.duration) || audio.duration === 0) {
-        audio.load();
-      }
-    };
-
+    // Event listeners
     audio.addEventListener("timeupdate", updateProgress);
     audio.addEventListener("loadedmetadata", setAudioData);
-    audio.addEventListener("durationchange", fixDuration);
     audio.addEventListener("ended", handleEnded);
     audio.addEventListener("play", handlePlay);
     audio.addEventListener("pause", handlePause);
 
+    // Cleanup
     return () => {
       audio.removeEventListener("timeupdate", updateProgress);
       audio.removeEventListener("loadedmetadata", setAudioData);
-      audio.removeEventListener("durationchange", fixDuration);
       audio.removeEventListener("ended", handleEnded);
       audio.removeEventListener("play", handlePlay);
       audio.removeEventListener("pause", handlePause);
     };
   }, [src]);
 
-  const togglePlay = async () => {
+  const togglePlay = () => {
     const audio = audioRef.current;
     if (!audio || !src) return;
 
-    try {
-      if (isPlaying) {
-        audio.pause();
-      } else {
-        await audio.play();
-      }
-    } catch (error) {
-      console.error("Erro ao reproduzir áudio:", error);
-      setIsPlaying(false);
+    if (isPlaying) {
+      audio.pause();
+    } else {
+      audio.play().catch(error => {
+        console.error("Erro ao reproduzir áudio:", error);
+        setIsPlaying(false);
+      });
     }
   };
 
   const handleProgressClick = (e) => {
     const audio = audioRef.current;
-    if (!audio || !duration) return;
+    // Só permite click se duration for um número finito e maior que 0
+    if (!audio || !duration || !isFinite(duration)) return;
 
     const rect = e.currentTarget.getBoundingClientRect();
     const clickX = e.clientX - rect.left;
     const newTime = (clickX / rect.width) * duration;
+    
     audio.currentTime = newTime;
     setProgress(newTime);
   };
 
   const formatTime = (time) => {
-    if (!isFinite(time) || isNaN(time)) return "0:00";
+    // Verifica se time não é um número finito e válido
+    if (!time || !isFinite(time) || isNaN(time)) return "0:00";
     const minutes = Math.floor(time / 60);
     const seconds = Math.floor(time % 60).toString().padStart(2, "0");
     return `${minutes}:${seconds}`;
@@ -120,8 +129,9 @@ const AudioPlayer = ({ src, isOwn }) => {
             className={`h-2 rounded transition-all duration-150 ${
               isOwn ? "bg-white" : "bg-cyan-400"
             }`}
-            style={{
-              width: duration ? `${(progress / duration) * 100}%` : "0%",
+            style={{ 
+             
+              width: duration && isFinite(duration) ? `${(progress / duration) * 100}%` : '0%' 
             }}
           />
         </div>
