@@ -9,50 +9,76 @@ const AudioPlayer = ({ src, isOwn }) => {
 
   useEffect(() => {
     const audio = audioRef.current;
+    if (!audio) return;
 
     const updateProgress = () => {
       setProgress(audio.currentTime);
     };
 
-    const setAudioDuration = () => {
-      setDuration(audio.duration);
+    const setAudioData = () => {
+      setDuration(audio.duration || 0);
+      setProgress(audio.currentTime || 0);
     };
 
-    audio.addEventListener("timeupdate", updateProgress);
-    audio.addEventListener("loadedmetadata", setAudioDuration);
+    const handleEnded = () => {
+      setIsPlaying(false);
+      setProgress(audio.duration || 0);
+    };
 
+    const handlePlay = () => setIsPlaying(true);
+    const handlePause = () => setIsPlaying(false);
+
+    // Event listeners
+    audio.addEventListener("timeupdate", updateProgress);
+    audio.addEventListener("loadedmetadata", setAudioData);
+    audio.addEventListener("ended", handleEnded);
+    audio.addEventListener("play", handlePlay);
+    audio.addEventListener("pause", handlePause);
+
+    // Cleanup
     return () => {
       audio.removeEventListener("timeupdate", updateProgress);
-      audio.removeEventListener("loadedmetadata", setAudioDuration);
+      audio.removeEventListener("loadedmetadata", setAudioData);
+      audio.removeEventListener("ended", handleEnded);
+      audio.removeEventListener("play", handlePlay);
+      audio.removeEventListener("pause", handlePause);
     };
-  }, []);
+  }, [src]); // Adicione src como dependência
 
   const togglePlay = () => {
     const audio = audioRef.current;
-    if (!audio) return;
+    if (!audio || !src) return;
 
     if (isPlaying) {
       audio.pause();
     } else {
-      audio.play();
+      audio.play().catch(error => {
+        console.error("Erro ao reproduzir áudio:", error);
+        setIsPlaying(false);
+      });
     }
-    setIsPlaying(!isPlaying);
   };
 
   const handleProgressClick = (e) => {
+    const audio = audioRef.current;
+    if (!audio || !duration) return;
+
     const rect = e.currentTarget.getBoundingClientRect();
     const clickX = e.clientX - rect.left;
     const newTime = (clickX / rect.width) * duration;
-    audioRef.current.currentTime = newTime;
+    
+    audio.currentTime = newTime;
     setProgress(newTime);
   };
 
   const formatTime = (time) => {
-    if (isNaN(time)) return "0:00";
+    if (!time || isNaN(time)) return "0:00";
     const minutes = Math.floor(time / 60);
     const seconds = Math.floor(time % 60).toString().padStart(2, "0");
     return `${minutes}:${seconds}`;
   };
+
+  if (!src) return null;
 
   return (
     <div
@@ -64,12 +90,19 @@ const AudioPlayer = ({ src, isOwn }) => {
 
       <button
         onClick={togglePlay}
-        className={`flex-shrink-0 ${isOwn ? "text-white" : "text-cyan-400"} hover:opacity-80`}
+        className={`flex-shrink-0 ${
+          isOwn ? "text-white" : "text-cyan-400"
+        } hover:opacity-80 transition-opacity`}
+        disabled={!src}
       >
-        {isPlaying ? <Pause className="w-5 h-5" /> : <Play className="w-5 h-5" />}
+        {isPlaying ? (
+          <Pause className="w-5 h-5" />
+        ) : (
+          <Play className="w-5 h-5" />
+        )}
       </button>
 
-      <div className="flex-1 flex flex-col">
+      <div className="flex-1 flex flex-col min-w-0">
         <div
           className={`h-2 rounded cursor-pointer ${
             isOwn ? "bg-white/30" : "bg-slate-600"
@@ -77,11 +110,13 @@ const AudioPlayer = ({ src, isOwn }) => {
           onClick={handleProgressClick}
         >
           <div
-            className={`h-2 rounded ${
+            className={`h-2 rounded transition-all duration-150 ${
               isOwn ? "bg-white" : "bg-cyan-400"
             }`}
-            style={{ width: `${(progress / duration) * 100}%` }}
-          ></div>
+            style={{ 
+              width: duration ? `${(progress / duration) * 100}%` : '0%' 
+            }}
+          />
         </div>
         <span className="text-xs mt-1">
           {formatTime(progress)} / {formatTime(duration)}
