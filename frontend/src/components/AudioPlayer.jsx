@@ -27,7 +27,7 @@ const AudioPlayer = ({ src, isOwn }) => {
 
     const setAudioData = () => {
       const audioDuration = audio.duration;
-      
+
       // Verifica explicitamente se a duração é infinita
       if (!isFinite(audioDuration)) {
         setIsLiveStream(true);
@@ -85,13 +85,13 @@ const AudioPlayer = ({ src, isOwn }) => {
     const audio = audioRef.current;
     // Para streams, não permitir seek
     if (!audio || isLiveStream) return;
-    
+
     if (!duration || !isFinite(duration)) return;
 
     const rect = e.currentTarget.getBoundingClientRect();
     const clickX = e.clientX - rect.left;
     const newTime = (clickX / rect.width) * duration;
-    
+
     audio.currentTime = newTime;
     setProgress(newTime);
   };
@@ -107,17 +107,15 @@ const AudioPlayer = ({ src, isOwn }) => {
 
   return (
     <div
-      className={`w-full mt-2 p-3 rounded-xl flex items-center gap-3 ${
-        isOwn ? "bg-cyan-600 text-white" : "bg-slate-800 text-slate-200"
-      }`}
+      className={`w-full mt-2 p-3 rounded-xl flex items-center gap-3 ${isOwn ? "bg-cyan-600 text-white" : "bg-slate-800 text-slate-200"
+        }`}
     >
       <audio ref={audioRef} src={src} preload="metadata" />
 
       <button
         onClick={togglePlay}
-        className={`flex-shrink-0 ${
-          isOwn ? "text-white" : "text-cyan-400"
-        } hover:opacity-80 transition-opacity`}
+        className={`flex-shrink-0 ${isOwn ? "text-white" : "text-cyan-400"
+          } hover:opacity-80 transition-opacity`}
         disabled={!src}
       >
         {isPlaying ? (
@@ -129,18 +127,16 @@ const AudioPlayer = ({ src, isOwn }) => {
 
       <div className="flex-1 flex flex-col min-w-0">
         <div
-          className={`h-2 rounded cursor-pointer ${
-            isOwn ? "bg-white/30" : "bg-slate-600"
-          }`}
+          className={`h-2 rounded cursor-pointer ${isOwn ? "bg-white/30" : "bg-slate-600"
+            }`}
           onClick={handleProgressClick}
         >
           <div
-            className={`h-2 rounded transition-all duration-150 ${
-              isOwn ? "bg-white" : "bg-cyan-400"
-            }`}
-            style={{ 
+            className={`h-2 rounded transition-all duration-150 ${isOwn ? "bg-white" : "bg-cyan-400"
+              }`}
+            style={{
               // Para streams, a barra avança continuamente sem relação com "duration"
-              width: isLiveStream 
+              width: isLiveStream
                 ? '50%' // Para streaming, você pode usar uma barra de progresso indeterminada ou baseada em outro critério
                 : (duration && isFinite(duration) ? `${(progress / duration) * 100}%` : '0%')
             }}
@@ -149,7 +145,7 @@ const AudioPlayer = ({ src, isOwn }) => {
         <span className="text-xs mt-1">
           {formatTime(progress)}
           {/* Mostra "Ao Vivo" para streams em vez da duração total */}
-          {isLiveStream ? " / Ao Vivo" : ` / ${formatTime(duration)}`}
+          {isLiveStream ? " 00:00" : ` / ${formatTime(duration)}`}
         </span>
       </div>
     </div>
