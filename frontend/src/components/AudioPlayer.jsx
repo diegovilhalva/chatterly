@@ -11,12 +11,12 @@ const AudioPlayer = ({ src, isOwn }) => {
     const audio = audioRef.current;
     if (!audio) return;
 
-    const updateProgress = () => {
-      setProgress(audio.currentTime);
-    };
+    const updateProgress = () => setProgress(audio.currentTime);
 
     const setAudioData = () => {
-      setDuration(audio.duration || 0);
+      const d = audio.duration;
+      if (!isFinite(d) || isNaN(d) || d === 0) return; 
+      setDuration(d);
       setProgress(audio.currentTime || 0);
     };
 
@@ -28,34 +28,42 @@ const AudioPlayer = ({ src, isOwn }) => {
     const handlePlay = () => setIsPlaying(true);
     const handlePause = () => setIsPlaying(false);
 
-    // Event listeners
+    const fixDuration = () => {
+      if (!isFinite(audio.duration) || audio.duration === 0) {
+        audio.load();
+      }
+    };
+
     audio.addEventListener("timeupdate", updateProgress);
     audio.addEventListener("loadedmetadata", setAudioData);
+    audio.addEventListener("durationchange", fixDuration);
     audio.addEventListener("ended", handleEnded);
     audio.addEventListener("play", handlePlay);
     audio.addEventListener("pause", handlePause);
 
-    // Cleanup
     return () => {
       audio.removeEventListener("timeupdate", updateProgress);
       audio.removeEventListener("loadedmetadata", setAudioData);
+      audio.removeEventListener("durationchange", fixDuration);
       audio.removeEventListener("ended", handleEnded);
       audio.removeEventListener("play", handlePlay);
       audio.removeEventListener("pause", handlePause);
     };
-  }, [src]); // Adicione src como dependência
+  }, [src]);
 
-  const togglePlay = () => {
+  const togglePlay = async () => {
     const audio = audioRef.current;
     if (!audio || !src) return;
 
-    if (isPlaying) {
-      audio.pause();
-    } else {
-      audio.play().catch(error => {
-        console.error("Erro ao reproduzir áudio:", error);
-        setIsPlaying(false);
-      });
+    try {
+      if (isPlaying) {
+        audio.pause();
+      } else {
+        await audio.play();
+      }
+    } catch (error) {
+      console.error("Erro ao reproduzir áudio:", error);
+      setIsPlaying(false);
     }
   };
 
@@ -66,13 +74,12 @@ const AudioPlayer = ({ src, isOwn }) => {
     const rect = e.currentTarget.getBoundingClientRect();
     const clickX = e.clientX - rect.left;
     const newTime = (clickX / rect.width) * duration;
-    
     audio.currentTime = newTime;
     setProgress(newTime);
   };
 
   const formatTime = (time) => {
-    if (!time || isNaN(time)) return "0:00";
+    if (!isFinite(time) || isNaN(time)) return "0:00";
     const minutes = Math.floor(time / 60);
     const seconds = Math.floor(time % 60).toString().padStart(2, "0");
     return `${minutes}:${seconds}`;
@@ -113,8 +120,8 @@ const AudioPlayer = ({ src, isOwn }) => {
             className={`h-2 rounded transition-all duration-150 ${
               isOwn ? "bg-white" : "bg-cyan-400"
             }`}
-            style={{ 
-              width: duration ? `${(progress / duration) * 100}%` : '0%' 
+            style={{
+              width: duration ? `${(progress / duration) * 100}%` : "0%",
             }}
           />
         </div>
