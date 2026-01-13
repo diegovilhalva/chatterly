@@ -17,7 +17,7 @@ const ChatsList = () => {
 
   return (
     <>
-      {chats.map((chat) => {
+      {chats?.map((chat) => {
         const lastMessage = chat.lastMessage;
         const lastMessageText = lastMessage
           ? lastMessage.image
