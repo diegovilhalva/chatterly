@@ -2,7 +2,7 @@
 
 Um moderno **chat em tempo real** construído com a stack **MERN** (MongoDB, Express, React e Node.js), com design elegante, desempenho otimizado e diversas funcionalidades inspiradas em aplicativos de mensagens como **WhatsApp e Telegram**.
 
-🔗 **Versão em produção:** [https://chatterly-jpyp1.sevalla.app/](https://chatterly-jpyp1.sevalla.app/)
+🔗 **Versão em produção:** [https://chatterly-omega.vercel.app/](https://chatterly-omega.vercel.app/)
 
 ---
 
@@ -15,8 +15,7 @@ Um moderno **chat em tempo real** construído com a stack **MERN** (MongoDB, Exp
 - **Armazenamento de mídia:** Cloudinary  
 - **Segurança:** Arcjet  
 - **Autenticação:** JWT  
-- **Deploy:** Sevalla
-
+- **Deploy:** Render (backend) + Vercel(frontend)
 ---
 
 ## ⚙️ Funcionalidades Principais
