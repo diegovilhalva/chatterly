@@ -14,11 +14,11 @@ const ChatsList = () => {
 
   if (isUsersLoading) return <UsersLoadingSkeleton />;
   if (chats.length === 0) return <NoChatsFound />;
-  console.log(chats)
+ 
 
   return (
     <>
-      {chats?.map((chat) => {
+      {chats.map((chat) => {
         const lastMessage = chat.lastMessage;
         const lastMessageText = lastMessage
           ? lastMessage.image
