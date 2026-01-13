@@ -3,7 +3,7 @@ import { axiosInstance } from "../lib/axios"
 import { toast } from "sonner"
 import { io } from "socket.io-client"
 
-const BASE_URL = import.meta.env.MODE === "development" ? "http://localhost:4000" : import.meta.env.BASE_URL_SERVER
+const BASE_URL = import.meta.env.MODE === "development" ? "http://localhost:4000" : import.meta.env.VITE_BASE_URL_SERVER
 
 export const useAuthStore = create((set,get) => ({
     authUser: null,
