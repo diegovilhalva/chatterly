@@ -12,7 +12,23 @@ const PORT = process.env.PORT || 4000
 
 
 app.use(express.json({limit:"5mb"}))
-app.use(cors({ origin: process.env.CLIENT_URL, credentials: true }))
+app.set("trust proxy", 1);
+const allowedOrigins = [
+    "http://localhost:5173",
+    process.env.CLIENT_URL, 
+];
+
+app.use(cors({
+    origin: function (origin, callback) {
+        if (!origin) return callback(null, true); 
+        if (allowedOrigins.includes(origin)) {
+            return callback(null, true);
+        }
+        return callback(new Error("Not allowed by CORS"));
+    },
+    credentials: true
+}));
+
 app.use(cookieParser())
 
 
